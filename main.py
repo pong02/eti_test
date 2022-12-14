@@ -31,12 +31,14 @@ class EtisalatTestHomeSearch(unittest.TestCase):
         search_result_page = page.SearchResultPage(self.driver)
         assert search_result_page.is_result_invalid()
 
-    def test_search_reserved_domain(self):
-        mainPage = page.MainPage(self.driver)
-        mainPage.search_text_element = "aeda.abudhabi"
-        mainPage.click_search_button()
-        search_result_page = page.SearchResultPage(self.driver)
-        assert search_result_page.is_result_reserved()
+    # def test_search_reserved_domain(self):
+    #     mainPage = page.MainPage(self.driver)
+    #     mainPage.search_text_element = "aeda.abudhabi"
+    #     mainPage.click_search_button()
+    #     search_result_page = page.SearchResultPage(self.driver)
+    #     assert search_result_page.is_result_reserved()
+    #   DOMAIN IS NOW NOT AVAILABLE, not reserved anymore 
+    # (the rules of domain reservation shows that it is NOT a constant)
 
     def test_search_premium_domain(self):
         mainPage = page.MainPage(self.driver)
@@ -147,23 +149,77 @@ class EtisalatTestSearchAddButtons(unittest.TestCase):
     def tearDown(self):
         self.driver.close()
     
-# class EtisalatTestSearchSummary(unittest.TestCase):
-#     #we tested every element in the page, now we put all tgt and check the summary
-#     def setUp(self):
-#         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-#         self.driver.get("https://otewww2.nic.ae/") 
+class EtisalatTestSearchSummary(unittest.TestCase):
+    #we tested every element in the page, now we put all tgt and check the summary
+    def setUp(self):
+        self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+        self.driver.get("https://otewww2.nic.ae/") 
 
-#     def tearDown(self):
-#         self.driver.close()
+    def test_add_single_item_out_of_one(self):
+        mainPage = page.MainPage(self.driver)
+        mainPage.search_text_element = "etisalattesting123.com"
+        mainPage.click_search_button()
+        search_result_page = page.SearchResultPage(self.driver)
+
+        assert search_result_page.is_summary_added(0)
+        assert search_result_page.is_summary_added(0,revert=True)   
+
+    def test_add_single_item_out_of_many(self):
+        mainPage = page.MainPage(self.driver)
+        mainPage.search_text_element = "etisalattesting123"
+        mainPage.click_search_button()
+        search_result_page = page.SearchResultPage(self.driver)
+
+        assert search_result_page.is_summary_added(0)
+        assert search_result_page.is_summary_added(0,revert=True)   
+
+    def test_add_multiple_item(self):
+        mainPage = page.MainPage(self.driver)
+        mainPage.search_text_element = "etisalattesting123"
+        mainPage.click_search_button()
+        search_result_page = page.SearchResultPage(self.driver)
+        
+        assert search_result_page.is_summary_added(1)
+        assert search_result_page.is_summary_added(1,revert=True)  
+
+    def test_add_all_item(self):
+        mainPage = page.MainPage(self.driver)
+        mainPage.search_text_element = "etisalattesting123"
+        mainPage.click_search_button()
+        search_result_page = page.SearchResultPage(self.driver)
+        
+        assert search_result_page.is_summary_added(2)
+        assert search_result_page.is_summary_added(2,revert=True)  
+
+    def tearDown(self):
+        self.driver.close()
     
 # class EtisalatTestSearchContinue(unittest.TestCase):
 #     #now we test payment (continue)
 #     def setUp(self):
-#         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-#         self.driver.get("https://otewww2.nic.ae/") 
+    #     self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    #     self.driver.get("https://otewww2.nic.ae/") 
 
-#     def tearDown(self):
-#         self.driver.close()
+    # def test_zero_item_continue(self):
+    #     mainPage = page.MainPage(self.driver)
+    #     mainPage.search_text_element = "google.com"
+    #     mainPage.click_search_button()
+    #     search_result_page = page.SearchResultPage(self.driver)
+
+    # def test_single_item_continue(self):
+    #     mainPage = page.MainPage(self.driver)
+    #     mainPage.search_text_element = "etisalattesting123.com"
+    #     mainPage.click_search_button()
+    #     search_result_page = page.SearchResultPage(self.driver)
+
+    # def test_multiple_item_continue(self):
+    #     mainPage = page.MainPage(self.driver)
+    #     mainPage.search_text_element = "etisalattesting123.com"
+    #     mainPage.click_search_button()
+    #     search_result_page = page.SearchResultPage(self.driver)
+
+    # def tearDown(self):
+    #     self.driver.close()
 
 
 # class EtisalatTestAccountCreation(unittest.TestCase):
