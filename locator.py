@@ -26,4 +26,11 @@ class SearchResultsPageLocators(object):
     # summary initial state
 
 class LoginPageLocators(object):
-    INPUTS = (By.TAG_NAME,"input")
+    NAME_FIELD = (By.XPATH,"//*[@id=\"verifyUserForm\"]/div/div[1]/div[3]/div/input")
+    PASSWORD_FIELD = (By.XPATH,"//*[@id=\"verifyUserForm\"]/div/div[1]/div[4]/div/input")
+    CAPTCHA_IMG = (By.XPATH,"//*[@id=\"captchaimg\"]")
+    CAPTCHA_FIELD = (By.XPATH,"//*[@id=\"verifyUserForm\"]/div/div[1]/div[5]/div[2]/input")
+    LOGIN_BTN = (By.XPATH,"//*[@id=\"verifyUserForm\"]/div/div[1]/button")
+    CREATE_BTN = (By.XPATH,"//*[@id=\"verifyUserForm\"]/div/div[2]/button")
+    FORGOT_USERNAME = (By.XPATH,"//*[@id=\"verifyUserForm\"]/div/div[1]/div[6]/div[1]/a")
+    FORGOT_PASSWORD = (By.XPATH,"//*[@id=\"verifyUserForm\"]/div/div[1]/div[6]/div[2]/a")

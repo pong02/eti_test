@@ -1,11 +1,22 @@
 from locator import *
 from element import BasePageElement
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 
 class SearchTextElement(BasePageElement):
     locator = "domains"
+
+# Due to the repeat in loginVO.username, we have to enter this manually
+# class UsernameLoginElement(BasePageElement):
+#     locator = "loginVO.username"
+
+class PasswordLoginElement(BasePageElement):
+    locator = "loginVO.password"
+
+class CaptchaLoginElement(BasePageElement):
+    locator = "loginVO.answer"
 
 ## Each class = 1 page to test, but all will inherit base page for driver
 class BasePage(object):
@@ -15,8 +26,6 @@ class BasePage(object):
 class MainPage(BasePage):
 
     search_text_element = SearchTextElement() # descriptor for us to jet SET any input we want (if possible)
-    # search_text_element = "Hello World" 
-    # will send hello world to the searchtextfield (enter key pressed, see element.py)
 
     def is_title_matches(self):
         return "Etisalat Domains Storefront" in self.driver.title
@@ -133,7 +142,7 @@ class SearchResultPage(BasePage):
                 total += float(price[1])
         return total
 
-    def checkSummaryItems(self, oldItemCount, summaryEntries):
+    def checkSummaryItems(self, oldItemCount, summaryEntries, revert= False):
         # special case, due to the element being summoned with "" rather than 
         # not summoned at all, there is this special case with length checking
         # when there is only 1 available and 1 is added, both sides will be 1
@@ -142,8 +151,32 @@ class SearchResultPage(BasePage):
                 return True
             else:
                 return False
+        elif revert:
+            # whoever thought it was a good idea to keep blank elements as ""
+            for entry in summaryEntries:
+                if entry[0] != "":
+                    return False
+            return True
         else:
             return (oldItemCount!=len(summaryEntries))
+    
+    def clearedSummaryItems(self,summaryEntries):
+    # def summaryItemsMatch(self,summaryEntries,domain_entries,singleMode = False):
+        displayed = []
+        for d,p in summaryEntries:
+            if d.text != '':
+                displayed.append(d.text)
+        # compare using set in case ordering changes
+        return [] == set(displayed)
+
+    def click_continue(self):
+        submit = self.driver.find_element(*SearchResultsPageLocators.CONTINUE)
+        submit.click()
+
+    def click_add_all(self,noLoad = False):
+        self.wait_load(noLoad)
+        add_all = self.driver.find_element(*SearchResultsPageLocators.ADD_ALL)
+        add_all.click()
     #=============================================================================
 
     def is_result_valid(self):
@@ -300,11 +333,8 @@ class SearchResultPage(BasePage):
                     print(e)
         return changed == valid_domain_count
 
-    def is_summary_added(self,addMode,revert=False):
-        if revert: #since revert means the page is already interacted with
-            results = self.wait_load(noLoad=True)
-        else:
-            results = self.wait_load()
+    def is_summary_added(self,addMode):
+        results = self.wait_load()
 
         # initial state compute, before it gets detached
         oldSummaryEntries = self.get_summary()
@@ -316,24 +346,16 @@ class SearchResultPage(BasePage):
         #addMode = 2 add everything using add all 
         if addMode == 0:
             # click only the first
-            if revert:
-                self.remove_from_cart(results[0])
-            else:
-                self.add_to_cart(results[0])
-                # THIS IS ASSUMING THE FIRST ONE ALWAYS WORKS< DANGEROUD
+            self.add_to_cart(results[0])
+            # THIS IS ASSUMING THE FIRST ONE ALWAYS WORKS< DANGEROUD
             
         elif addMode == 1:
             # click all but one by one
-            if revert:
-                for result in results:
-                    self.remove_from_cart(result)
-            else:
-                for result in results:
-                    self.add_to_cart(result)
+            for result in results:
+                self.add_to_cart(result)
             
         elif addMode == 2:
-            add_all = self.driver.find_element(*SearchResultsPageLocators.ADD_ALL)
-            add_all.click()
+            self.click_add_all()
         
         # get the new summary items
         summaryEntries = self.get_summary()
@@ -351,20 +373,136 @@ class SearchResultPage(BasePage):
         # elif len(summaryEntries)==1 and singleMode and len(checked)==1:
             # return True 
         if addMode == 0:
-            if revert:
-                #on single revert, we just need to check if it is BLANK
-                itemsAccurate = self.summaryIsBlank(summaryEntries)
-            else:
-                itemsAccurate = self.summaryItemsMatch(summaryEntries,results,singleMode=True)
+            itemsAccurate = self.summaryItemsMatch(summaryEntries,results,singleMode=True)
         else:
             itemsAccurate = self.summaryItemsMatch(summaryEntries,results,singleMode=False)
+        #now items accurate and items updated for revert is wrong
+        print ([totalUpdated , itemsUpdated , totalAccurate , itemsAccurate])
+        return totalUpdated and itemsUpdated and totalAccurate and itemsAccurate
+
+    def is_summary_cleared(self,addMode):
+        #TODO: THIS DOES NOT WORK YET BECAUSE OF THE "" ON REMOVE
+        results = self.wait_load(noLoad=True)
+
+        #addMode = 0 add only 1 via add
+        #addMode = 1 add multiple via adds
+        #addMode = 2 add everything using add all 
+        if addMode == 0:
+            # click only the first
+            self.remove_from_cart(results[0])
+        elif addMode == 1:
+            # click all but one by one
+            for result in results:
+                self.remove_from_cart(result)
             
-        # return totalUpdated and itemsUpdated and totalAccurate and itemsAccurate
-        return [totalUpdated , itemsUpdated , totalAccurate , itemsAccurate]
-            
-
-
-    
-
+        elif addMode == 2:
+            # when revert we dont need to wait load
+            self.click_add_all(noLoad=True)
         
+        # get the new summary items
+        summaryEntries = self.get_summary()
+
+        # check if item display is  0
+        totalUpdated = (0 == self.total_summary(summaryEntries))
+        # since the items remain present but as "", it will never be len 0
+        # so we will start looping the entries to check if it is all blank
+        for entry in summaryEntries:
+            if entry[0] != "":
+                itemsUpdated = False
+        itemsUpdated = (len(summaryEntries) == 0)
+
+        totalDisplay = self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL)
+        #check if items and total displayed is correct
+        displayedTotal = float(totalDisplay.text.split(" ")[1])
+        totalAccurate = (displayedTotal == 0)
+        # this is an unavoidable loophole, the fact that there will always be 1
+        # element on display restricts us from ever checking on cancel in singlemode
+        # elif len(summaryEntries)==1 and singleMode and len(checked)==1:
+            # return True 
+        if addMode == 0:
+            #on single revert, we just need to check if it is BLANK
+            itemsAccurate = self.summaryIsBlank(summaryEntries)
+        else:
+            itemsAccurate = self.clearedSummaryItems(summaryEntries)
+        #now items accurate and items updated for revert is wrong
+        print ([totalUpdated , itemsUpdated , totalAccurate , itemsAccurate])
+        return totalUpdated and itemsUpdated and totalAccurate and itemsAccurate
+
+    def is_add_prompt(self):
+        msg = ""
+        # test for the existence of a pop up dialog
+        try:
+            WebDriverWait(self.driver, 5).until (EC.alert_is_present())
+            # switch_to.alert for switching to alert and accept
+            alert = self.driver.switch_to.alert
+            msg = alert.text
+            # print(msg)
+            alert.accept()
+        except TimeoutException:
+            # print("alert does not Exist in page")
+            msg = "alert does not Exist in page"
+        return msg == "No domains selected / available!"
+            
+class LoginPage(BasePage):
+    password_text_element = PasswordLoginElement() 
+    captcha_text_element = CaptchaLoginElement() 
+    #============================Helper Functions================================
+    # def click_dropdown(self,domain_entry,target_index):
+    #     #we just need to check if the text in drop changed
+    #     #this is needed because the dropdowns are NOT select elements, but div
+    #     #domain entry will be a SINGLE ROW in results page (result)
+    #     drop = domain_entry.find_element(*SearchResultsPageLocators.DROPDOWN_PARENT)
+    #     drop.click()
+    #     dropdown = domain_entry.find_element(*SearchResultsPageLocators.DROPDOWN_BOX)
+    #     options = dropdown.find_elements(*SearchResultsPageLocators.DROPDOWN_OPTIONS)
+    #     options[target_index].click()
+    def click_login(self):
+        btn = self.driver.find_element(*LoginPageLocators.LOGIN_BTN)
+        btn.click()
+
+    def enter_name(self, name):
+        field = self.driver.find_element(*LoginPageLocators.NAME_FIELD)
+        field.send_keys(name)
+
+    #-----------------------------------------------------------------------------
+    def is_login_prompt(self):
+        #test for page change and existence of fields, buttons
+        # captcha img
+        img = WebDriverWait(self.driver, 10).until(
+            EC.visibility_of_element_located(LoginPageLocators.CAPTCHA_IMG)
+        )
+        if not img:
+            print("Captcha img NOT Visible")
+            return False
+        else:
+            print("Captcha img Visible")
+        checkInteractable = {
+            "name": (LoginPageLocators.NAME_FIELD),
+            "pw": (LoginPageLocators.PASSWORD_FIELD),
+            "captcha": (LoginPageLocators.CAPTCHA_FIELD),
+            "login": (LoginPageLocators.LOGIN_BTN),
+            "create": (LoginPageLocators.CREATE_BTN),
+            "forgot_pw": (LoginPageLocators.FORGOT_PASSWORD),
+            "forgot_name": (LoginPageLocators.FORGOT_USERNAME)
+        }
+        for elementName, locator in checkInteractable.items():
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located(locator)
+            )
+            if not element:
+                print(elementName,"NOT Interactable")
+                return False
+            else:
+                print(elementName,"Interactable")
+        # if it can make it to this stage, all elements are visible/interactable
+        return True
     
+    def is_login_invalid(self):
+        self.click_login()
+        msg = self.driver.find_element(By.CLASS_NAME,"alert-danger").text
+        return msg == "The login details entered are incorrect, please enter the correct login details."
+
+    def is_captcha_invalid(self):
+        self.click_login()
+        msg = self.driver.find_element(By.CLASS_NAME,"alert-danger").text
+        return msg == "The captcha details entered are incorrect, please enter the correct captcha details."
