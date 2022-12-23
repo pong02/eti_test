@@ -83,48 +83,49 @@ class SearchResultPage(BasePage):
                 valid_domains.append(name.text)
         return valid_domains
 
-    def add_to_cart(self,domain_entry):
-        if self.domain_available(domain_entry):
-            try:
-                #scrolling is actuallt NOT NEEDED as the topbar WILL NEVER block on 
-                # the way down, but we keep it for completeness and safety
-                actions = ActionChains(self.driver)
-                btn = domain_entry.find_element(*SearchResultsPageLocators.ADD_BTN)
-                actions.move_to_element(btn).perform()
-                btn.click()
-            except Exception as e:
-                raise e
+    def get_valid_index(self,domain_entries):
+        #this is to check what index of the summary can be checked
+        indices = [False]*len(domain_entries)
+        for i in range(len(domain_entries)):
+            if self.domain_available(domain_entries[i]):
+                indices[i]=True
+        return indices
 
-    def remove_from_cart(self,domain_entry):
-        if self.domain_available(domain_entry):
-            try:
-                actions = ActionChains(self.driver)
-                btn = domain_entry.find_element(*SearchResultsPageLocators.CANCEL_BTN)
-                actions.move_to_element(btn).perform()
-                btn.click()
-            except Exception as e:
-                raise e
+    def click_add(self,result):
+        #this just TRIES TO click THE DOMAIN ENTRRY IT IS PROVIDED
+        # here we just want to skip if it cant be clicked
+        try:
+            #scrolling is actuallt NOT NEEDED as the topbar WILL NEVER block on 
+            # the way down, but we keep it for completeness and safety
+            btn = WebDriverWait(self.driver,1).until(
+                EC.element_to_be_clickable(result.find_element(*SearchResultsPageLocators.ADD_BTN))
+            )
+            actions = ActionChains(self.driver)
+            actions.move_to_element(btn).perform()
+            btn.click()
+        except Exception as e:
+            print("button not found on", result.find_element(*SearchResultsPageLocators.DOMAIN_NAME).text)
+            return False
+        return True
+
+    def add_one_to_cart(self,domain_entries):
+        clicked = False
+        for entry in domain_entries:
+            clicked = self.click_add(entry)
+            if clicked:
+                return
+            
+    def remove_one_from_cart(self,domain_entries):
+        #it is literally the same thing, just for ease of reading
+        self.add_one_to_cart(domain_entries)
+
+    def add_all_to_cart(self,domain_entries):
+        for entry in domain_entries:
+            self.click_add(entry)
     
-    def summaryItemsMatch(self,summaryEntries,domain_entries,singleMode = False):
-        # first we want to check what items are checked, put them in an array
-        checked = self.get_valid_domain_names(domain_entries)
-        # for all cases, as long as it is available, we will add it
-        displayed = []
-        # then we will get the items in summary to compare
-
-        for d,p in summaryEntries:
-            if d.text != '':
-                displayed.append(d.text)
-        if singleMode:
-            return displayed[0] in checked
-        # compare using set in case ordering changes
-        return set(checked) == set(displayed)
-
-    def summaryIsBlank(self,summaryEntries):
-        #this one can only be used for singleMode, as it is the only way to 
-        #overcome the weakness of the 1 blank element by default design
-        return summaryEntries[0][0] == ""
-
+    def remove_all_from_cart(self,domain_entries):
+        self.add_all_to_cart(domain_entries)
+        
     def get_summary(self): 
         summary = self.driver.find_element(*SearchResultsPageLocators.SUMMARY)
         summDomains = summary.find_elements(*SearchResultsPageLocators.SUMMARY_DOMAINS)
@@ -142,33 +143,6 @@ class SearchResultPage(BasePage):
                 total += float(price[1])
         return total
 
-    def checkSummaryItems(self, oldItemCount, summaryEntries, revert= False):
-        # special case, due to the element being summoned with "" rather than 
-        # not summoned at all, there is this special case with length checking
-        # when there is only 1 available and 1 is added, both sides will be 1
-        if len(summaryEntries) == 1 and oldItemCount == 1:
-            if summaryEntries[0][0] != "":
-                return True
-            else:
-                return False
-        elif revert:
-            # whoever thought it was a good idea to keep blank elements as ""
-            for entry in summaryEntries:
-                if entry[0] != "":
-                    return False
-            return True
-        else:
-            return (oldItemCount!=len(summaryEntries))
-    
-    def clearedSummaryItems(self,summaryEntries):
-    # def summaryItemsMatch(self,summaryEntries,domain_entries,singleMode = False):
-        displayed = []
-        for d,p in summaryEntries:
-            if d.text != '':
-                displayed.append(d.text)
-        # compare using set in case ordering changes
-        return [] == set(displayed)
-
     def click_continue(self):
         submit = self.driver.find_element(*SearchResultsPageLocators.CONTINUE)
         submit.click()
@@ -177,6 +151,47 @@ class SearchResultPage(BasePage):
         self.wait_load(noLoad)
         add_all = self.driver.find_element(*SearchResultsPageLocators.ADD_ALL)
         add_all.click()
+
+    def summary_items_correct(self,domain_entries,newSummaryEntries,singleMode):
+        # To check if the items displayed are correct and accurate, we need to check one by one
+        # Every possible domain summons a BLANK '' on add click, regardless fo status
+        # first get array of valid indices
+            valid = self.get_valid_index(domain_entries)
+            expectedCount = self.get_valid_domains(domain_entries)
+            i = 0
+            itemsShown = 0
+            # for each domain available, check if it is BLANK. If not, since its singlemode, we break
+            while i < len(domain_entries):
+                if valid[i]:
+                    if itemsShown == 0 and newSummaryEntries[i][0].text == '' and not singleMode:
+                        #if it is valid and not SingleMODE, it should not be blank
+                        print(valid)
+                        print("There is an unexpected item in the summary listing at index",i,"should be valid, but is",newSummaryEntries[i][0].text)
+                        return False
+                    elif itemsShown == 1 and singleMode and newSummaryEntries[i][0].text != '':
+                        #if it is valid but 1 item already on display, it shud be blank
+                        print("There is an unexpected item in the summary listing at index",i,"should be blank, but is",newSummaryEntries[i][0].text)
+                        return False
+                    else:
+                        #if valid and NOT BLANK AND not the first valid item
+                        if singleMode:
+                            itemsShown = 1
+                        else:
+                            itemsShown += 1
+                else:
+                    #make sure invalids are alwys blank
+                    if newSummaryEntries[i][0].text != '':
+                        print("There is an unexpected item in the summary listing at index: ",i)
+                        return False
+                i+=1
+            if singleMode and itemsShown!=1:
+                print("There is way too much items displayed!\nExpected: 1\nDisplayed:",itemsShown)
+                return False
+            elif itemsShown!= expectedCount and not singleMode:
+                print("Displayed items do not match!\nExpected:",expectedCount,"\nDisplayed:",itemsShown)
+                return False
+
+            return True
     #=============================================================================
 
     def is_result_valid(self):
@@ -333,100 +348,182 @@ class SearchResultPage(BasePage):
                     print(e)
         return changed == valid_domain_count
 
-    def is_summary_added(self,addMode):
+    def is_one_added_to_summary(self,addAll=False):
+        #this one tests if 1/1 available will be added properly in summary (adn reverse)
         results = self.wait_load()
+        # first thing to do would be to get the initial (blank) state
+        initSummaryEntries = self.get_summary()
+        initTotalPrice = self.total_summary(initSummaryEntries)
 
-        # initial state compute, before it gets detached
-        oldSummaryEntries = self.get_summary()
-        oldTotal = self.total_summary(oldSummaryEntries)
-        oldItemCount = len(oldSummaryEntries)
-
-        #addMode = 0 add only 1 via add
-        #addMode = 1 add multiple via adds
-        #addMode = 2 add everything using add all 
-        if addMode == 0:
-            # click only the first
-            self.add_to_cart(results[0])
-            # THIS IS ASSUMING THE FIRST ONE ALWAYS WORKS< DANGEROUD
-            
-        elif addMode == 1:
-            # click all but one by one
-            for result in results:
-                self.add_to_cart(result)
-            
-        elif addMode == 2:
+        #now we will add the desired number of domains
+        if addAll:
             self.click_add_all()
-        
-        # get the new summary items
-        summaryEntries = self.get_summary()
-
-        # check if item display is no longer empty and total no longer 0
-        totalUpdated = (oldTotal != self.total_summary(summaryEntries))
-        itemsUpdated = self.checkSummaryItems(oldItemCount,summaryEntries)
-
-        totalDisplay = self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL)
-        #check if items and total displayed is correct
-        displayedTotal = float(totalDisplay.text.split(" ")[1])
-        totalAccurate = (displayedTotal == self.total_summary(summaryEntries))
-        # this is an unavoidable loophole, the fact that there will always be 1
-        # element on display restricts us from ever checking on cancel in singlemode
-        # elif len(summaryEntries)==1 and singleMode and len(checked)==1:
-            # return True 
-        if addMode == 0:
-            itemsAccurate = self.summaryItemsMatch(summaryEntries,results,singleMode=True)
         else:
-            itemsAccurate = self.summaryItemsMatch(summaryEntries,results,singleMode=False)
-        #now items accurate and items updated for revert is wrong
-        print ([totalUpdated , itemsUpdated , totalAccurate , itemsAccurate])
-        return totalUpdated and itemsUpdated and totalAccurate and itemsAccurate
+            self.add_one_to_cart(results)
 
-    def is_summary_cleared(self,addMode):
-        #TODO: THIS DOES NOT WORK YET BECAUSE OF THE "" ON REMOVE
-        results = self.wait_load(noLoad=True)
+        #then get all the new data
+        newSummaryEntries = self.get_summary()
+        newTotalPrice = self.total_summary(newSummaryEntries)
 
-        #addMode = 0 add only 1 via add
-        #addMode = 1 add multiple via adds
-        #addMode = 2 add everything using add all 
-        if addMode == 0:
-            # click only the first
-            self.remove_from_cart(results[0])
-        elif addMode == 1:
-            # click all but one by one
-            for result in results:
-                self.remove_from_cart(result)
-            
-        elif addMode == 2:
-            # when revert we dont need to wait load
+        #first test we want to do is to test if the total amount is no longer same as initstate after adding
+        if initTotalPrice == newTotalPrice:
+            print("Summary Total is still = to initial state")
+            return False
+        
+        #then we will test if the non initial amount is correct
+        displayedTotal = float(self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL).text.split(" ")[1])
+        expectedTotal = self.total_summary(newSummaryEntries)
+        if displayedTotal != expectedTotal:
+            print("The amount shown in total is incorrect:\nExpected:",expectedTotal," Displayed:",displayedTotal)
+            #this assumes that the items' prices in summary is correct
+            return False
+
+        #check items in summary (single)
+        if not self.summary_items_correct(results,newSummaryEntries,True):
+            return False
+
+        # if it reaches this point, no problems in normal flow
+        # return True
+        
+        # reverse operation, undo adding the desired number of domains
+        if addAll:
             self.click_add_all(noLoad=True)
-        
-        # get the new summary items
-        summaryEntries = self.get_summary()
-
-        # check if item display is  0
-        totalUpdated = (0 == self.total_summary(summaryEntries))
-        # since the items remain present but as "", it will never be len 0
-        # so we will start looping the entries to check if it is all blank
-        for entry in summaryEntries:
-            if entry[0] != "":
-                itemsUpdated = False
-        itemsUpdated = (len(summaryEntries) == 0)
-
-        totalDisplay = self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL)
-        #check if items and total displayed is correct
-        displayedTotal = float(totalDisplay.text.split(" ")[1])
-        totalAccurate = (displayedTotal == 0)
-        # this is an unavoidable loophole, the fact that there will always be 1
-        # element on display restricts us from ever checking on cancel in singlemode
-        # elif len(summaryEntries)==1 and singleMode and len(checked)==1:
-            # return True 
-        if addMode == 0:
-            #on single revert, we just need to check if it is BLANK
-            itemsAccurate = self.summaryIsBlank(summaryEntries)
         else:
-            itemsAccurate = self.clearedSummaryItems(summaryEntries)
-        #now items accurate and items updated for revert is wrong
-        print ([totalUpdated , itemsUpdated , totalAccurate , itemsAccurate])
-        return totalUpdated and itemsUpdated and totalAccurate and itemsAccurate
+            self.remove_one_from_cart(results)
+
+        #then get all the new data
+        newSummaryEntries = self.get_summary()
+        newTotalPrice = self.total_summary(newSummaryEntries)
+
+        #first test we want to do is to test if the total amount is no longer same as initstate after adding
+        if initTotalPrice != newTotalPrice:
+            print("[R] Summary Total is != to initial state")
+            return False
+        
+        #then we will test if the non initial amount is correct
+        displayedTotal = float(self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL).text.split(" ")[1])
+        expectedTotal = initTotalPrice
+        if displayedTotal != expectedTotal:
+            print("[R] The amount shown in total is incorrect:\nExpected:",expectedTotal," Displayed:",displayedTotal)
+            #this assumes that the items' prices in summary is correct
+            return False
+
+        #then we will test if the amount of items is correct
+        #for reverse, we just need to loop over all summary entries and see if it is blank
+        for i in range(len(newSummaryEntries)):
+            if newSummaryEntries[i][0].text != '':
+                print("[R] There are still items in the summary listing at index: ",i)
+                return False
+
+        # if it reaches this point, no problems in normal AND reverse flow
+        return True
+    
+    def is_all_added(self,addAll=False):
+        #this one tests if everything available will be added properly in summary (and reversed)
+        results = self.wait_load()
+        # first thing to do would be to get the initial (blank) state
+        initSummaryEntries = self.get_summary()
+        initTotalPrice = self.total_summary(initSummaryEntries)
+
+        #now we will add the desired number of domains
+        if addAll:
+            self.click_add_all()
+        else:
+            self.add_all_to_cart(results)
+
+        #then get all the new data
+        newSummaryEntries = self.get_summary()
+        newTotalPrice = self.total_summary(newSummaryEntries)
+
+        #first test we want to do is to test if the total amount is no longer same as initstate after adding
+        if initTotalPrice == newTotalPrice:
+            print("Summary Total is still = to initial state")
+            return False
+        
+        #then we will test if the non initial amount is correct
+        displayedTotal = float(self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL).text.split(" ")[1])
+        expectedTotal = self.total_summary(newSummaryEntries)
+        if displayedTotal != expectedTotal:
+            print("The amount shown in total is incorrect:\nExpected:",expectedTotal," Displayed:",displayedTotal)
+            #this assumes that the items' prices in summary is correct
+            return False
+
+        # check if summary items are correct in MANY mode
+        if not self.summary_items_correct(results,newSummaryEntries,False):
+            return False
+
+        # if it reaches this point, no problems in normal flow
+        # return True
+        
+        # reverse operation, undo adding the desired number of domains
+        if addAll:
+            self.click_add_all(noLoad=True)
+        else:
+            self.remove_all_from_cart(results)
+
+        #then get all the new data
+        newSummaryEntries = self.get_summary()
+        newTotalPrice = self.total_summary(newSummaryEntries)
+
+        #first test we want to do is to test if the total amount is no longer same as initstate after adding
+        if initTotalPrice != newTotalPrice:
+            print("[R] Summary Total is != to initial state")
+            return False
+        
+        #then we will test if the non initial amount is correct
+        displayedTotal = float(self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL).text.split(" ")[1])
+        expectedTotal = initTotalPrice
+        if displayedTotal != expectedTotal:
+            print("[R] The amount shown in total is incorrect:\nExpected:",expectedTotal," Displayed:",displayedTotal)
+            #this assumes that the items' prices in summary is correct
+            return False
+
+        #then we will test if the items are correct
+        # regardless of type, this will work as reverse SHOULD revert to all blanks
+        for i in range(len(newSummaryEntries)):
+            if newSummaryEntries[i][0].text != '':
+                print("[R] There are still items in the summary listing at index: ",i)
+                return False
+
+        # if it reaches this point, no problems in normal AND reverse flow
+        return True
+
+    def is_nothing_added(self,addAll=False):
+        #this one tests if everything available will be added properly in summary (and reversed)
+        results = self.wait_load()
+        # first thing to do would be to get the initial (blank) state
+        initSummaryEntries = self.get_summary()
+        initTotalPrice = self.total_summary(initSummaryEntries)
+
+        #now we will add the desired number of domains
+        if addAll:
+            self.click_add_all()
+        else:
+            self.add_all_to_cart(results)
+
+        #then get all the new data
+        newSummaryEntries = self.get_summary()
+        newTotalPrice = self.total_summary(newSummaryEntries)
+
+        #first test we want to do is to test if the total amount is still same as initstate 
+        if initTotalPrice != newTotalPrice:
+            print("Something is added to the summary when nothing is valid!")
+            return False
+        
+        #then we will test if the non initial amount is correct
+        displayedTotal = float(self.driver.find_element(*SearchResultsPageLocators.SUMMARY_TOTAL).text.split(" ")[1])
+        if displayedTotal != 0:
+            print("The amount shown in total is incorrect:\nExpected:",0," Displayed:",displayedTotal)
+            #this assumes that the items' prices in summary is correct
+            return False
+
+        # check if summary items are BLANKS 
+        for i in range(len(newSummaryEntries)):
+            if newSummaryEntries[i][0].text != '':
+                return False
+
+        # if it reaches this point, no problems in normal flow. we do not need reverse in invalid flow
+        return True
 
     def is_add_prompt(self):
         msg = ""
