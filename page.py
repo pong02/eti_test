@@ -1,5 +1,8 @@
+import uuid
+import random
 from locator import *
 from element import BasePageElement
+from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -11,12 +14,84 @@ class SearchTextElement(BasePageElement):
 # Due to the repeat in loginVO.username, we have to enter this manually
 # class UsernameLoginElement(BasePageElement):
 #     locator = "loginVO.username"
-
-class PasswordLoginElement(BasePageElement):
+# These are from continue page
+class ContinuePasswordLoginElement(BasePageElement):
     locator = "loginVO.password"
 
-class CaptchaLoginElement(BasePageElement):
+class ContinueCaptchaLoginElement(BasePageElement):
     locator = "loginVO.answer"
+
+#these are from homepage
+class NameLoginElement(BasePageElement):
+    locator = "username"
+
+class PasswordLoginElement(BasePageElement):
+    locator = "password"
+
+class CaptchaLoginElement(BasePageElement):
+    locator = "answer"
+
+# +++ create acc page elements
+class OrgElement(BasePageElement):
+    locator = "userAccountVO.company"
+
+class ContactPicElement(BasePageElement):
+    locator = "userAccountVO.fname"
+    
+class AddrElement1(BasePageElement):
+    locator = "userAccountVO.addr1"
+      
+class AddrElement2(BasePageElement):
+    locator = "userAccountVO.addr2"
+     
+class cityElement(BasePageElement):
+    locator = "userAccountVO.city"
+    
+class StateElement(BasePageElement):
+    locator = "userAccountVO.state"
+    
+class zipPoElement(BasePageElement):
+    locator = "userAccountVO.zip"
+     
+class phonePreElement(BasePageElement):
+    locator = "phone1"
+    
+class phonePostElement(BasePageElement):
+    locator = "phone2"
+    
+class mobilePreElement(BasePageElement):
+    locator = "mobile1"
+    
+class mobilePostElement(BasePageElement):
+    locator = "mobile2"
+    
+class faxPreElement(BasePageElement):
+    locator = "fax1"
+    
+class faxPostElement(BasePageElement):
+    locator = "fax2"
+    
+class emailElement(BasePageElement):
+    locator = "userAccountVO.email"
+    
+class taxElement(BasePageElement):
+    locator = "userAccountVO.trn"
+    
+class userIDElement(BasePageElement):
+    locator = "userAccountVO.username"
+    
+class passwordElement(BasePageElement):
+    locator = "userAccountVO.password"
+    
+class confirmPasswordElement(BasePageElement):
+    locator = "confirmPassword"
+    
+#Payemtn gateway textfields
+class cardNumElement(BasePageElement):
+    locator = "creditCardNumber"
+
+class cvvElement(BasePageElement):
+    locator = "ValidationCode"
 
 ## Each class = 1 page to test, but all will inherit base page for driver
 class BasePage(object):
@@ -32,6 +107,10 @@ class MainPage(BasePage):
 
     def click_search_button(self):
         element = self.driver.find_element(*MainPageLocators.SEARCH_BUTTON)
+        element.click()
+
+    def click_login_button(self):
+        element = self.driver.find_element(*MainPageLocators.LOGIN_BUTTON)
         element.click()
 
 class SearchResultPage(BasePage):
@@ -540,33 +619,28 @@ class SearchResultPage(BasePage):
             msg = "alert does not Exist in page"
         return msg == "No domains selected / available!"
             
-class LoginPage(BasePage):
-    password_text_element = PasswordLoginElement() 
-    captcha_text_element = CaptchaLoginElement() 
+class LoginPageContinue(BasePage):
+    password_text_element = ContinuePasswordLoginElement() 
+    captcha_text_element = ContinueCaptchaLoginElement() 
     #============================Helper Functions================================
-    # def click_dropdown(self,domain_entry,target_index):
-    #     #we just need to check if the text in drop changed
-    #     #this is needed because the dropdowns are NOT select elements, but div
-    #     #domain entry will be a SINGLE ROW in results page (result)
-    #     drop = domain_entry.find_element(*SearchResultsPageLocators.DROPDOWN_PARENT)
-    #     drop.click()
-    #     dropdown = domain_entry.find_element(*SearchResultsPageLocators.DROPDOWN_BOX)
-    #     options = dropdown.find_elements(*SearchResultsPageLocators.DROPDOWN_OPTIONS)
-    #     options[target_index].click()
     def click_login(self):
-        btn = self.driver.find_element(*LoginPageLocators.LOGIN_BTN)
+        btn = self.driver.find_element(*ContinueLoginPageLocators.LOGIN_BTN)
         btn.click()
 
     def enter_name(self, name):
-        field = self.driver.find_element(*LoginPageLocators.NAME_FIELD)
+        field = self.driver.find_element(*ContinueLoginPageLocators.NAME_FIELD)
         field.send_keys(name)
+
+    def click_create(self):
+        btn = self.driver.find_element(*ContinueLoginPageLocators.CREATE_BTN)
+        btn.click()
 
     #-----------------------------------------------------------------------------
     def is_login_prompt(self):
         #test for page change and existence of fields, buttons
         # captcha img
         img = WebDriverWait(self.driver, 10).until(
-            EC.visibility_of_element_located(LoginPageLocators.CAPTCHA_IMG)
+            EC.visibility_of_element_located(ContinueLoginPageLocators.CAPTCHA_IMG)
         )
         if not img:
             print("Captcha img NOT Visible")
@@ -574,13 +648,13 @@ class LoginPage(BasePage):
         else:
             print("Captcha img Visible")
         checkInteractable = {
-            "name": (LoginPageLocators.NAME_FIELD),
-            "pw": (LoginPageLocators.PASSWORD_FIELD),
-            "captcha": (LoginPageLocators.CAPTCHA_FIELD),
-            "login": (LoginPageLocators.LOGIN_BTN),
-            "create": (LoginPageLocators.CREATE_BTN),
-            "forgot_pw": (LoginPageLocators.FORGOT_PASSWORD),
-            "forgot_name": (LoginPageLocators.FORGOT_USERNAME)
+            "name": (ContinueLoginPageLocators.NAME_FIELD),
+            "pw": (ContinueLoginPageLocators.PASSWORD_FIELD),
+            "captcha": (ContinueLoginPageLocators.CAPTCHA_FIELD),
+            "login": (ContinueLoginPageLocators.LOGIN_BTN),
+            "create": (ContinueLoginPageLocators.CREATE_BTN),
+            "forgot_pw": (ContinueLoginPageLocators.FORGOT_PASSWORD),
+            "forgot_name": (ContinueLoginPageLocators.FORGOT_USERNAME)
         }
         for elementName, locator in checkInteractable.items():
             element = WebDriverWait(self.driver, 10).until(
@@ -603,3 +677,206 @@ class LoginPage(BasePage):
         self.click_login()
         msg = self.driver.find_element(By.CLASS_NAME,"alert-danger").text
         return msg == "The captcha details entered are incorrect, please enter the correct captcha details."
+            
+class LoginPage(BasePage):
+    username_text_element = NameLoginElement() 
+    password_text_element = PasswordLoginElement() 
+    captcha_text_element = CaptchaLoginElement() 
+    # helper functions
+    def click_login(self):
+        btn = self.driver.find_element(*LoginPageLocators.LOGIN_BTN)
+        btn.click()
+    # -------------tests--------------
+    
+    def is_login_invalid(self):
+        self.click_login()
+        msg = self.driver.find_element(By.CLASS_NAME,"alert-danger").text
+        return msg == "The login details entered are incorrect, please enter the correct login details."
+
+    def is_captcha_invalid(self):
+        self.click_login()
+        msg = self.driver.find_element(By.CLASS_NAME,"alert-danger").text
+        return msg == "The captcha details entered are incorrect, please enter the correct captcha details."
+            
+class CreatePage(BasePage):
+    # a lot of fields are available, defining all first
+    company_org = OrgElement() 
+    contactPIC = ContactPicElement() 
+    addr1 = AddrElement1()  
+    addr2 = AddrElement2() 
+    city = cityElement() 
+    state = StateElement() 
+    zipPO = zipPoElement() 
+    #country is a dropdown, we need a helper for that
+    phonePre = phonePreElement()
+    phonePost = phonePostElement()
+    mobilePre = mobilePreElement()
+    mobilePost = mobilePostElement()
+    faxPre = faxPreElement()
+    faxPost = faxPostElement()
+    email = emailElement()
+    tax = taxElement()
+    userID = userIDElement()
+    password = passwordElement()
+    confirmPassword = confirmPasswordElement()
+
+    # ===================== helper functions ===================== 
+    def randomUserName(self):
+        rid = uuid.uuid4()
+        # uuid for UNIQUE NAME
+        return "can_delete_"+str(rid)
+
+    def countrySelect(self):
+        # this selects a random country
+        # get dropdown parent element
+        dropdown = self.driver.find_element(*CreatePageLocators.DROPDOWN_BOX)
+        select = Select(dropdown)
+        all_options = select.options
+        i = random.randint(0,len(all_options))
+        select.select_by_visible_text(all_options[i].text)
+
+    def checkCheckBox(self):
+        checkbox = self.driver.find_element(*CreatePageLocators.CHECKBOX)
+        checkbox.click()
+
+    def click_back(self):
+        btn = self.driver.find_element(*CreatePageLocators.BACK_BTN)
+        btn.click()
+
+    def click_submit(self):
+        btn = self.driver.find_element(*CreatePageLocators.SUBMIT_BTN)
+        btn.click()
+
+    #--------------------- tests ---------------------
+    def is_checkbox_dialogue(self):
+        msg = ""
+        # test for the existence of a pop up dialog
+        try:
+            WebDriverWait(self.driver, 5).until (EC.alert_is_present())
+            # switch_to.alert for switching to alert and accept
+            alert = self.driver.switch_to.alert
+            msg = alert.text
+            # print(msg)
+            alert.accept()
+        except TimeoutException:
+            # print("alert does not Exist in page")
+            return False
+        return True
+
+    def is_form_valid(self):
+        errors = self.driver.find_elements(*CreatePageLocators.ERROR_MSGS)
+        if len(errors) == 0:
+            return True
+        else:
+            #here we can do more form checking as there are a few variants of each error, but I am lazy
+            #eg: username error may be BLANK OR TAKEN etc etc
+            for error in errors:
+                print(error.text)
+            return False
+
+class Step2Page(BasePage):
+    # =================== Helper functions =================
+    def click_continue(self):        
+        btn = self.driver.find_element(*Step2PageLocators.CONTINUE_BTN)
+        btn.click()
+        return
+
+    def add_whois(self):
+        return
+        
+    def add_dnssec(self):
+        return
+
+    #-------------------- tests --------------------
+    def is_summary_valid(self):
+        return True
+
+class Step3Page(BasePage):
+    # =================== Helper functions =================
+    def click_back(self):
+        return
+
+    def click_checkout(self):
+        btn = self.driver.find_element(*Step3PageLocators.CONTINUE_BTN)
+        btn.click()
+        return
+
+    def click_modify(self):
+        return
+
+    def checkAllCheckBox(self):
+        return
+
+    def checkCheckBox(self):
+        return
+        
+    def selectYear(self):
+        return
+
+    #-------------------- tests --------------------
+    def is_checkbox_error(self):
+        msg = ""
+        # test for the existence of a pop up dialog
+        try:
+            WebDriverWait(self.driver, 5).until (EC.alert_is_present())
+            # switch_to.alert for switching to alert and accept
+            alert = self.driver.switch_to.alert
+            msg = alert.text
+            # print(msg)
+            alert.accept()
+        except TimeoutException:
+            # print("alert does not Exist in page")
+            return False
+        return True
+
+class Step4Page(BasePage):
+    # =================== Helper functions =================
+    def click_proceed(self):        
+        btn = self.driver.find_element(*Step4PageLocators.CONTINUE_BTN)
+        btn.click()
+
+    def checkCheckbox(self):
+        checkbox = self.driver.find_element(*Step4PageLocators.CHECKBOX)
+        checkbox.click()
+        
+    def add_dnssec(self):
+        return
+
+    #-------------------- tests --------------------
+    def is_summary_valid(self):
+        return True
+
+class PaymentGatewayPage(BasePage):
+    card_num_field = cardNumElement()
+    cvv_field = cvvElement()
+    # =================== Helper functions =================
+    def click_samsung_pay(self):        
+        btn = self.driver.find_element(*PaymentGatewayLocators.SAMSUNG_PAY)
+        btn.click()
+
+    def setExpYear(self):
+        checkbox = self.driver.find_element(*PaymentGatewayLocators.CHECKBOX)
+        checkbox.click()
+
+    def setExpMonth(self):
+        checkbox = self.driver.find_element(*PaymentGatewayLocators.CHECKBOX)
+        checkbox.click()
+
+    def click_reset(self):        
+        btn = self.driver.find_element(*PaymentGatewayLocators.RESET_BTN)
+        btn.click()
+
+    def click_pay(self):        
+        btn = self.driver.find_element(*PaymentGatewayLocators.CONTINUE_BTN)
+        btn.click()
+
+    def wait_gateway_load(self):
+        # we simply wait until we can click samsung pay
+        btn = WebDriverWait(self.driver,60).until(
+            EC.element_to_be_clickable(PaymentGatewayLocators.SAMSUNG_PAY)
+        )
+        return btn
+
+    #-------------------- tests --------------------
+    def is_summary_valid(self):
+        return True
