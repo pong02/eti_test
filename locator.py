@@ -24,6 +24,8 @@ class SearchResultsPageLocators(object):
     SUMMARY_DOMAINS = (By.CLASS_NAME,"price-list")
     SUMMARY_PRICE = (By.CLASS_NAME,"order-list")
     SUMMARY_TOTAL = (By.TAG_NAME,"h3")
+    POP_UP = (By.CSS_SELECTOR,"#overlay-abudhabi")
+    POP_UP_ACCEPT = (By.CSS_SELECTOR, 'input')
     # summary initial state
 
 class ContinueLoginPageLocators(object):
@@ -55,6 +57,12 @@ class CreatePageLocators(object):
 
 class Step2PageLocators(object):
     CONTINUE_BTN = (By.NAME,'_eventId_next')
+    ADD_WHOIS = (By.XPATH,'//*[@id="label-3"]')
+    ADD_DNSSEC = (By.ID,'label-6')
+    DOMAIN_SECTION = (By.XPATH,'//*[@id="domainDetails-1030kasd"]')
+    VAS_SECTION = (By.ID,"domainDetails-1030kvas")
+    DOMAIN_NAME = (By.CLASS_NAME,"price-list")
+    DOMAIN_PRICE = (By.CLASS_NAME,"order-list")
 
 class Step3PageLocators(object):
     CONTINUE_BTN = (By.NAME,'_eventId_checkout')

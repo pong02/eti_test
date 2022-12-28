@@ -142,6 +142,14 @@ class SearchResultPage(BasePage):
         options = dropdown.find_elements(*SearchResultsPageLocators.DROPDOWN_OPTIONS)
         options[target_index].click()
 
+    def close_pop_up(self):
+        try:
+            popup = self.driver.find_element(*SearchResultsPageLocators.POP_UP)
+            btn = popup.find_element(*SearchResultsPageLocators.POP_UP_ACCEPT)
+            btn.click()
+        except Exception as e:
+            print("No pop up to close... Ignore if single mode. Otherwise, something is wrong")
+
     def domain_available(self,domain_entry):
         result_msg = domain_entry.find_element(*SearchResultsPageLocators.RESULT_MSG).text
         return result_msg == "This Domain is Available"
@@ -244,7 +252,6 @@ class SearchResultPage(BasePage):
                 if valid[i]:
                     if itemsShown == 0 and newSummaryEntries[i][0].text == '' and not singleMode:
                         #if it is valid and not SingleMODE, it should not be blank
-                        print(valid)
                         print("There is an unexpected item in the summary listing at index",i,"should be valid, but is",newSummaryEntries[i][0].text)
                         return False
                     elif itemsShown == 1 and singleMode and newSummaryEntries[i][0].text != '':
@@ -776,19 +783,120 @@ class CreatePage(BasePage):
 
 class Step2Page(BasePage):
     # =================== Helper functions =================
-    def click_continue(self):        
+    def click_continue(self):
         btn = self.driver.find_element(*Step2PageLocators.CONTINUE_BTN)
         btn.click()
-        return
 
     def add_whois(self):
-        return
+        btn = self.driver.find_element(*Step2PageLocators.ADD_WHOIS)
+        btn.click()
         
     def add_dnssec(self):
-        return
+        btn = self.driver.find_element(*Step2PageLocators.ADD_DNSSEC)
+        btn.click()        
+        
+    def get_summary(self,section): 
+        # section will be the domain OR services section
+        summDomains = section.find_elements(*Step2PageLocators.DOMAIN_NAME)
+        summPrice = section.find_elements(*Step2PageLocators.DOMAIN_PRICE)
+        return list(zip(summDomains, summPrice))
+
+    def total_summary(self,domainSection):
+        # calculate some stats for further verification
+        # we can increase quality of validation by ensuring 
+        # more than OLD on add or less than OLD on cancel
+        summaryEntries = self.get_summary(domainSection)
+        total = 0
+        for d,p in summaryEntries:
+            price = p.text.split(" ")
+            if price[0] != '':
+                total += float(price[1])
+        return total
+
+    def check_services(self,servicesSection):
+        # the positions will be 1 if a non null item is found (more services may be introduced)
+        summaryEntries = self.get_summary(servicesSection)
+        positions = [0]*len(summaryEntries)
+        i = 0
+        for d,p in summaryEntries:
+            # print(d.text,p.text)
+            #here the price is listed as free, but it might not be a constant so we check for null only
+            if d.text != '' and p.text != '':
+                positions[i] = 1
+            i+=1
+        return positions
 
     #-------------------- tests --------------------
-    def is_summary_valid(self):
+    def is_summary_valid(self,mode=1):
+        # precondition: the domain section must be visible and with a non 0 price
+        try:
+            domainSection= WebDriverWait(self.driver, 1).until(
+                EC.presence_of_element_located(Step2PageLocators.DOMAIN_SECTION)
+            )
+            if self.total_summary(domainSection) <= 0:
+                print("Total price for all domains is <=0")
+                return False
+        except:
+            print("Missing elements from domains section")
+            return False
+        # regardless of choice, VAS MUST ALWAYS BE PRESENT
+        try:
+            serviceSection = WebDriverWait(self.driver, 1).until(
+                EC.presence_of_element_located(Step2PageLocators.VAS_SECTION)
+            )
+        except:
+            print("Services section is missing")
+            return False
+        # get all position of services 1 = something inside, 0 = ''
+        services_position = self.check_services(serviceSection)
+        if mode == 0:
+            # nothing selected, VAS should still appaer but no contents
+            if 1 in services_position:
+                print("No services were selected but something is in the Value Added Services section")
+                return False
+        elif mode == 1:
+            # who is selected (DEFAULT)
+            if services_position[0] != 1:
+                print("WHOIS is selected but it is not in its section")
+                return False
+        elif mode == 2:
+            # dns selected
+            if services_position[1] != 1:
+                print("DNSSEC is selected but it is not in its section")
+                return False
+        elif mode == 3:
+            # all selected
+            # print(services_position)
+            if 0 in services_position:
+                print("BOTH are selected but soemthing is missing in the Value Added Services section")
+                return False
+        return True
+
+    def is_reverse_summary_valid(self):
+        # precondition: the domain section must still be visible and with a non 0 price
+        try:
+            domainSection = WebDriverWait(self.driver, 1).until(
+                EC.presence_of_element_located(Step2PageLocators.DOMAIN_SECTION)
+            )
+            if self.total_summary(domainSection) <= 0:
+                print("Total price for all domains is <=0")
+                return False
+        except:
+            print("Missing elements from domains section")
+            return False
+        # regardless of choice, VAS MUST ALWAYS BE PRESENT
+        try:
+            serviceSection = WebDriverWait(self.driver, 1).until(
+                EC.presence_of_element_located(Step2PageLocators.VAS_SECTION)
+            )
+        except:
+            print("Services section is missing")
+            return False
+        # get all position of services 1 = something inside, 0 = ''
+        # regardless of choice, on removal of all services, it MUST BE 0 filled
+        if 1 in self.check_services(serviceSection):
+            print("There are items in the services section after removal")
+            return False
         return True
 
 class Step3Page(BasePage):
@@ -799,7 +907,15 @@ class Step3Page(BasePage):
     def click_checkout(self):
         btn = self.driver.find_element(*Step3PageLocators.CONTINUE_BTN)
         btn.click()
-        return
+
+    def checkout_clickable(self):
+        try:
+            WebDriverWait(self.driver,10).until(
+                 EC.element_to_be_clickable(Step3PageLocators.CONTINUE_BTN)
+            )
+            return True
+        except: #if time out, button is not clickable
+            return False
 
     def click_modify(self):
         return
