@@ -66,6 +66,93 @@ class Step2PageLocators(object):
 
 class Step3PageLocators(object):
     CONTINUE_BTN = (By.NAME,'_eventId_checkout')
+    BACK_BTN = (By.NAME,'_eventId_editvas')
+    CHECK_ALL = (By.NAME,'Check_ctr')
+    CHECK_MARKS = (By.CLASS_NAME,'checkmark') 
+    MODIFY_BUTTONS = (By.NAME, '_eventId_configure')
+    DROPDOWN_CONTAINERS= (By.CLASS_NAME, 'selection')
+    SELECT_OPTIONS = (By.CLASS_NAME, 'select2-results__option')
+
+class ModifyPageLocators(object):
+    # this section is for objects that are not constant throughout the page
+    # CHECKBOX IS ACTUALLY NOT BOUND TO ANY TABS
+    CHECKBOX = (By.XPATH,'//*[@id="agreement"]')
+    # TABS
+    REGISTRANT_TAB = (By.XPATH,'//*[@id="reg-tab"]')
+    ADMIN_TAB = (By.XPATH,'//*[@id="myTab"]/li[2]')
+    TECHNICAL_TAB = (By.XPATH,'//*[@id="myTab"]/li[3]')
+    BILLING_TAB = (By.XPATH,'//*[@id="myTab"]/li[4]')
+    COPY_SELECT_ADMIN = (By.XPATH,'//*[@id="selectSameAs_adm"]')
+    COPY_SELECT_TECH = (By.XPATH,'//*[@id="selectSameAs_tec"]')
+    COPY_SELECT_BILL = (By.XPATH,'//*[@id="selectSameAs_bil"]')
+    # EVERYTHING ELSE IS BOUND TO TABS, AND HAVE EXACTLY THE SAME XPATH OTHER THAN ID
+    # SINCE XPATH MANIPULATION IS WAY EASIER, WE WILL NOT USE BASIC LOCATORS
+    '''//*[@id="regTab"]
+    //*[@id="admTab"]
+    //*[@id="tecTab"]
+    //*[@id="bilTab"]'''
+    # default will be regTab, so 
+    tab = 'regTab'
+    ORG_NAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[3]/div/input')
+    FNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[1]/input')
+    LNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[2]/input')
+    ADDR_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[5]/div/input')
+    ADDR_2 = ("By.XPATH",'//*[@id="'+tab+'"]/div[6]/div/input')
+    CITY = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[1]/input')
+    STATE = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[2]/input')
+    POSTCODE = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[1]/input')
+    COUNTRY_SELECT = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[2]/select')
+    PHONE_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[1]')
+    PHONE_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[2]')
+    FAX_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[1]')
+    FAX_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[2]')
+    EMAIL = ("By.XPATH",'//*[@id="'+tab+'"]/div[11]/div/input')
+    ORG_NAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[3]/div/input')
+    FNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[1]/input')
+    LNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[2]/input')
+    ADDR_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[5]/div/input')
+    ADDR_2 = ("By.XPATH",'//*[@id="'+tab+'"]/div[6]/div/input')
+    CITY = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[1]/input')
+    STATE = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[2]/input')
+    POSTCODE = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[1]/input')
+    COUNTRY_SELECT = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[2]/select')
+    PHONE_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[1]')
+    PHONE_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[2]')
+    FAX_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[1]')
+    FAX_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[2]')
+    EMAIL = ("By.XPATH",'//*[@id="'+tab+'"]/div[11]/div/input')
+
+# manually update all items
+def setTab(instance,tabID):
+    tab = tabID
+    instance.ORG_NAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[3]/div/input')
+    instance.FNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[1]/input')
+    instance.LNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[2]/input')
+    instance.ADDR_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[5]/div/input')
+    instance.ADDR_2 = ("By.XPATH",'//*[@id="'+tab+'"]/div[6]/div/input')
+    instance.CITY = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[1]/input')
+    instance.STATE = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[2]/input')
+    instance.POSTCODE = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[1]/input')
+    instance.COUNTRY_SELECT = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[2]/select')
+    instance.PHONE_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[1]')
+    instance.PHONE_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[2]')
+    instance.FAX_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[1]')
+    instance.FAX_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[2]')
+    instance.EMAIL = ("By.XPATH",'//*[@id="'+tab+'"]/div[11]/div/input')
+    instance.ORG_NAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[3]/div/input')
+    instance.FNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[1]/input')
+    instance.LNAME = ("By.XPATH",'//*[@id="'+tab+'"]/div[4]/div[2]/input')
+    instance.ADDR_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[5]/div/input')
+    instance.ADDR_2 = ("By.XPATH",'//*[@id="'+tab+'"]/div[6]/div/input')
+    instance.CITY = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[1]/input')
+    instance.STATE = ("By.XPATH",'//*[@id="'+tab+'"]/div[7]/div[2]/input')
+    instance.POSTCODE = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[1]/input')
+    instance.COUNTRY_SELECT = ("By.XPATH",'//*[@id="'+tab+'"]/div[8]/div[2]/select')
+    instance.PHONE_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[1]')
+    instance.PHONE_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[9]/div/div/input[2]')
+    instance.FAX_0 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[1]')
+    instance.FAX_1 = ("By.XPATH",'//*[@id="'+tab+'"]/div[10]/div/div/input[2]')
+    instance.EMAIL = ("By.XPATH",'//*[@id="'+tab+'"]/div[11]/div/input')
 
 class Step4PageLocators(object):
     CONTINUE_BTN = (By.NAME,'_eventId_submit')

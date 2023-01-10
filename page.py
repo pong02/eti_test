@@ -593,7 +593,7 @@ class SearchResultPage(BasePage):
 
         #first test we want to do is to test if the total amount is still same as initstate 
         if initTotalPrice != newTotalPrice:
-            print("Something is added to the summary when nothing is valid!")
+            print("Expected to get total proce of 0 but got "+str(newTotalPrice)+" instead!")
             return False
         
         #then we will test if the non initial amount is correct
@@ -904,6 +904,19 @@ class Step3Page(BasePage):
     def click_back(self):
         return
 
+    def set_dropdown(self,index):
+        drops = self.driver.find_elements(*Step3PageLocators.DROPDOWN_CONTAINERS)
+        # drops will be ALL the drop downs (1-10)
+        drops[index].click()
+        # we try to get the select object WITH custom function since it is SPAN so we can randomize
+        select = self.driver.find_elements(*Step3PageLocators.SELECT_OPTIONS)
+        # here, we will  just pick a random one available using index
+        choice = random.randint(0,len(select)-1)
+        # it must be random because there might be domains tht have different year options, 
+        # despite 1-5 being the majority
+        # select choice
+        select[choice].click()
+
     def click_checkout(self):
         btn = self.driver.find_element(*Step3PageLocators.CONTINUE_BTN)
         btn.click()
@@ -917,14 +930,18 @@ class Step3Page(BasePage):
         except: #if time out, button is not clickable
             return False
 
-    def click_modify(self):
-        return
+    def click_modify(self,index):
+        modify_btns = self.driver.find_elements(*Step3PageLocators.MODIFY_BUTTONS)
+        modify_btns[index].click()
 
     def checkAllCheckBox(self):
-        return
+        btn = self.driver.find_element(*Step3PageLocators.CHECK_ALL)
+        btn.click()
 
-    def checkCheckBox(self):
-        return
+    def checkCheckBox(self,index):
+        # note that the first one is the CHECK ALL box
+        checks = self.driver.find_elements(*Step3PageLocators.CHECK_MARKS)
+        checks[index].click()
         
     def selectYear(self):
         return
@@ -941,15 +958,39 @@ class Step3Page(BasePage):
             # print(msg)
             alert.accept()
         except TimeoutException:
-            # print("alert does not Exist in page")
+            print("alert does not Exist in page")
             return False
         return True
+
+class ModifyPage(BasePage):
+    def checkTnC(self):
+        box = self.driver.find_element(*ModifyPageLocators.CHECKBOX)
+        box.click()
+
+    def fillRegistrant(self):
+        box = self.driver.find_element(*ModifyPageLocators.CHECKBOX)
+        box.click()
 
 class Step4Page(BasePage):
     # =================== Helper functions =================
     def click_proceed(self):        
         btn = self.driver.find_element(*Step4PageLocators.CONTINUE_BTN)
         btn.click()
+
+    def proceed_complete(self):
+        btn = None
+        try:
+            btn = WebDriverWait(self.driver,15).until(
+                EC.element_to_be_clickable(Step4PageLocators.CONTINUE_BTN)
+            )
+        except TimeoutException:
+            print("Failed to reach the 4th page in time")
+            return False
+        # in case no time out but for somereason btn is none
+        if btn:
+            return True
+        else:
+            return False
 
     def checkCheckbox(self):
         checkbox = self.driver.find_element(*Step4PageLocators.CHECKBOX)
